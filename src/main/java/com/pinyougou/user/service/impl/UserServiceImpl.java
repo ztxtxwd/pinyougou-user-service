@@ -21,7 +21,16 @@ import com.alibaba.dubbo.config.annotation.Service;
 import com.alibaba.fastjson.JSON;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import com.pinyougou.mapper.TbAreasMapper;
+import com.pinyougou.mapper.TbCitiesMapper;
+import com.pinyougou.mapper.TbProvincesMapper;
 import com.pinyougou.mapper.TbUserMapper;
+import com.pinyougou.pojo.TbAreas;
+import com.pinyougou.pojo.TbAreasExample;
+import com.pinyougou.pojo.TbCities;
+import com.pinyougou.pojo.TbCitiesExample;
+import com.pinyougou.pojo.TbProvinces;
+import com.pinyougou.pojo.TbProvincesExample;
 import com.pinyougou.pojo.TbUser;
 import com.pinyougou.pojo.TbUserExample;
 import com.pinyougou.pojo.TbUserExample.Criteria;
@@ -38,7 +47,19 @@ import entity.PageResult;
 public class UserServiceImpl implements UserService {
 
 	@Autowired
+	private RedisTemplate templates;
+	
+	@Autowired
 	private TbUserMapper userMapper;
+	
+	@Autowired
+	private TbProvincesMapper proMapper;
+	
+	@Autowired
+	private TbCitiesMapper cityMapper;
+	
+	@Autowired
+	private TbAreasMapper areaMapper;
 	
 	/**
 	 * 查询全部
@@ -78,6 +99,7 @@ public class UserServiceImpl implements UserService {
 	 */
 	@Override
 	public void update(TbUser user){
+		System.out.println(user.toString());
 		userMapper.updateByPrimaryKey(user);
 	}	
 	
@@ -218,6 +240,61 @@ public class UserServiceImpl implements UserService {
 		}
 		
 		return true;
+	}
+	
+	@Override
+	public TbUser findByUsername(String username) {
+		TbUserExample example = new TbUserExample();
+		Criteria criteria = example.createCriteria();
+		criteria.andUsernameEqualTo(username);
+		List<TbUser> list = userMapper.selectByExample(example );
+		return list.get(0);
+	}
+
+	@Override
+	public List<TbProvinces> selectPro() {
+		
+		List<TbProvinces> provinces = (List<TbProvinces>) templates.boundHashOps("provinces").get("hehe");
+		
+		if(provinces == null || provinces.size() == 0) {
+			provinces = proMapper.selectByExample(new TbProvincesExample());
+			templates.boundHashOps("provinces").put("hehe", provinces);
+		}
+		
+		return provinces;
+		
+	}
+
+	@Override
+	public List<TbCities> selectCities(String proId) {
+		
+		List<TbCities> cities = (List<TbCities>) templates.boundHashOps("cities").get(proId);
+		if(cities == null || cities.size() == 0) {
+			TbCitiesExample example = new TbCitiesExample();
+			com.pinyougou.pojo.TbCitiesExample.Criteria criteria = example.createCriteria();
+			criteria.andProvinceidEqualTo(proId);
+			cities = cityMapper.selectByExample(example );
+			
+			templates.boundHashOps("cities").put(proId, cities);
+		}
+		
+		
+		return cities;
+	}
+
+	@Override
+	public List<TbAreas> selectAreas(String cityId) {
+		List<TbAreas> areas = (List<TbAreas>) templates.boundHashOps("areas").get(cityId);
+		if(areas == null || areas.size() == 0) {
+			TbAreasExample example = new TbAreasExample();
+			com.pinyougou.pojo.TbAreasExample.Criteria criteria = example.createCriteria();
+			criteria.andCityidEqualTo(cityId);
+			areas = areaMapper.selectByExample(example );
+			
+			templates.boundHashOps("areas").put(cityId, areas);
+		}
+		
+		return areas;
 	}
 	
 }
